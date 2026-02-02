@@ -18,5 +18,5 @@ namespace SpectrumConstants
     // Display configuration
     constexpr float MIN_DB = -100.0f;
     constexpr float MAX_DB = 0.0f;
-    constexpr int TRACK_TIMEOUT_MS = 3000;     // Remove track after 3 seconds of no data
+    constexpr int TRACK_TIMEOUT_MS = 1500;  // Mark track offline after 1.5 seconds of no data
 }

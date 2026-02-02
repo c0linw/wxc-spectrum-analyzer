@@ -66,19 +66,11 @@ SpectrumAnalyzerRelayAudioProcessorEditor::SpectrumAnalyzerRelayAudioProcessorEd
     };
     addAndMakeVisible(oscPortEditor);
 
-    // Enable button
-    enableButton.setButtonText("Enabled");
-    enableButton.setToggleState(audioProcessor.isRelayEnabled(), juce::dontSendNotification);
-    enableButton.onClick = [this]()
-    {
-        audioProcessor.setRelayEnabled(enableButton.getToggleState());
-    };
-    addAndMakeVisible(enableButton);
 
     // Start timer to refresh DAW track name (in case DAW provides it after editor is created)
     startTimerHz(2);  // Check twice per second
 
-    setSize(300, 240);
+    setSize(300, 210);
 }
 
 SpectrumAnalyzerRelayAudioProcessorEditor::~SpectrumAnalyzerRelayAudioProcessorEditor()
@@ -121,9 +113,6 @@ void SpectrumAnalyzerRelayAudioProcessorEditor::resized()
     row = area.removeFromTop(24);
     oscPortLabel.setBounds(row.removeFromLeft(80));
     oscPortEditor.setBounds(row.removeFromLeft(70));
-
-    area.removeFromTop(10);
-    enableButton.setBounds(area.removeFromTop(24));
 }
 
 void SpectrumAnalyzerRelayAudioProcessorEditor::timerCallback()

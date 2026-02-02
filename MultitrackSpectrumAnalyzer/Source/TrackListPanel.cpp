@@ -70,8 +70,13 @@ void TrackListPanel::rebuildTrackList()
                 if (track.trackId == currentTrackIds[static_cast<size_t>(i)])
                 {
                     trackButtons[i]->setToggleState(track.enabled, juce::dontSendNotification);
-                    // Also update button text in case track name changed
-                    trackButtons[i]->setButtonText(track.trackName);
+                    
+                    // Update button text with status indicator
+                    juce::String displayText = track.trackName;
+                    if (track.status == TrackStatus::Offline)
+                        displayText += " (Offline)";
+                    
+                    trackButtons[i]->setButtonText(displayText);
                     break;
                 }
             }
@@ -85,7 +90,12 @@ void TrackListPanel::rebuildTrackList()
 
     for (const auto& track : tracks)
     {
-        auto* button = new juce::ToggleButton(track.trackName);
+        // Create display text with status indicator
+        juce::String displayText = track.trackName;
+        if (track.status == TrackStatus::Offline)
+            displayText += " (Offline)";
+        
+        auto* button = new juce::ToggleButton(displayText);
         button->setToggleState(track.enabled, juce::dontSendNotification);
 
         // Set colour indicator

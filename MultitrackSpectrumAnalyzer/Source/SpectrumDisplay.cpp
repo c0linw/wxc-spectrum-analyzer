@@ -118,6 +118,7 @@ void SpectrumDisplay::drawSpectrum(juce::Graphics& g, const TrackData& track, ju
 
     if (pathStarted)
     {
+        // Flat line naturally appears for offline tracks (zeroed spectrum)
         g.setColour(track.colour);
         g.strokePath(spectrumPath, juce::PathStrokeType(1.5f));
     }

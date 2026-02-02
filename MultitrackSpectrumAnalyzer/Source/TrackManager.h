@@ -3,13 +3,17 @@
 #include <JuceHeader.h>
 #include "../../Common/SpectrumData.h"
 
+enum class TrackStatus { Active, Offline };
+
 struct TrackData
 {
     juce::String trackId;      // Unique identifier (UUID from plugin)
     juce::String trackName;    // Display name
     double sampleRate { 0.0 };
     juce::Colour colour;
-    juce::int64 lastUpdateTime { 0 };
+    juce::int64 lastUpdateTime { 0 };       // Last heartbeat or spectrum update
+    juce::int64 lastSpectrumTime { 0 };     // Last spectrum data update (for offline detection)
+    TrackStatus status { TrackStatus::Active };
     std::array<float, SpectrumConstants::NUM_BINS> spectrum { 0.0f };
     bool enabled { true };
 };
@@ -31,8 +35,8 @@ public:
                     int numBins,
                     double sampleRate);
 
-    /// Removes tracks that haven't been updated within timeout period.
-    void removeStaleTrack();
+    /// Updates stale tracks: marks as offline and zeros spectrum, never removes
+    void updateStaleTrack();
 
     /// Returns list of currently active tracks (thread-safe copy).
     std::vector<TrackData> getActiveTracks() const;

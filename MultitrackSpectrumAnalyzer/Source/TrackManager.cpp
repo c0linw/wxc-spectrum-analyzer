@@ -31,16 +31,22 @@ void TrackManager::updateTrackPresence(const juce::String& trackId,
         newTrack.sampleRate = sampleRate;
         newTrack.colour = getNextColour();
         newTrack.lastUpdateTime = juce::Time::currentTimeMillis();
+        newTrack.lastSpectrumTime = 0;  // No spectrum data yet
+        newTrack.status = TrackStatus::Active;
         newTrack.enabled = true;
 
         tracks[trackId] = newTrack;
     }
     else
     {
-        // Update display name and timestamp
+        // Update display name, timestamp, and reset to Active if was offline
         it->second.trackName = trackName;
         it->second.sampleRate = sampleRate;
         it->second.lastUpdateTime = juce::Time::currentTimeMillis();
+        if (it->second.status == TrackStatus::Offline)
+        {
+            it->second.status = TrackStatus::Active;
+        }
     }
 }
 
@@ -62,6 +68,8 @@ void TrackManager::updateTrack(const juce::String& trackId,
         newTrack.sampleRate = sampleRate;
         newTrack.colour = getNextColour();
         newTrack.lastUpdateTime = juce::Time::currentTimeMillis();
+        newTrack.lastSpectrumTime = juce::Time::currentTimeMillis();
+        newTrack.status = TrackStatus::Active;
         newTrack.enabled = true;
 
         // Copy spectrum data
@@ -73,10 +81,15 @@ void TrackManager::updateTrack(const juce::String& trackId,
     }
     else
     {
-        // Update existing track
+        // Update existing track and reset to Active if was offline
         it->second.trackName = trackName;
         it->second.sampleRate = sampleRate;
         it->second.lastUpdateTime = juce::Time::currentTimeMillis();
+        it->second.lastSpectrumTime = juce::Time::currentTimeMillis();
+        if (it->second.status == TrackStatus::Offline)
+        {
+            it->second.status = TrackStatus::Active;
+        }
 
         int copySize = juce::jmin(numBins, SpectrumConstants::NUM_BINS);
         for (int i = 0; i < copySize; ++i)
@@ -84,19 +97,30 @@ void TrackManager::updateTrack(const juce::String& trackId,
     }
 }
 
-void TrackManager::removeStaleTrack()
+void TrackManager::updateStaleTrack()
 {
     juce::ScopedLock sl(lock);
 
     juce::int64 now = juce::Time::currentTimeMillis();
-    juce::int64 timeout = SpectrumConstants::TRACK_TIMEOUT_MS;
 
-    for (auto it = tracks.begin(); it != tracks.end(); )
+    for (auto& pair : tracks)
     {
-        if (now - it->second.lastUpdateTime > timeout)
-            it = tracks.erase(it);
-        else
-            ++it;
+        auto& track = pair.second;
+        
+        // Check time since last SPECTRUM data (not heartbeat)
+        juce::int64 timeSinceSpectrum = (track.lastSpectrumTime > 0) ? (now - track.lastSpectrumTime) : 0;
+
+        if (track.status == TrackStatus::Active)
+        {
+            // Mark as Offline if no spectrum data received within timeout
+            if (track.lastSpectrumTime > 0 && timeSinceSpectrum > SpectrumConstants::TRACK_TIMEOUT_MS)
+            {
+                track.status = TrackStatus::Offline;
+                // Zero out spectrum to show flat line
+                track.spectrum.fill(0.0f);
+            }
+        }
+        // Offline tracks stay offline (and zeroed) until spectrum data received
     }
 }
 

@@ -129,7 +129,7 @@ void MainComponent::oscMessageReceived(const juce::OSCMessage& message)
 
 void MainComponent::timerCallback()
 {
-    trackManager.removeStaleTrack();
+    trackManager.updateStaleTrack();
     updateStatusLabel();
 }
 
