@@ -22,6 +22,31 @@ SpectrumAnalyzerRelayAudioProcessorEditor::SpectrumAnalyzerRelayAudioProcessorEd
     };
     addAndMakeVisible(trackNameEditor);
 
+    // OSC port label
+    oscPortLabel.setText("OSC Port:", juce::dontSendNotification);
+    addAndMakeVisible(oscPortLabel);
+
+    // OSC port editor
+    oscPortEditor.setText(juce::String(audioProcessor.getOscPort()));
+    oscPortEditor.setInputRestrictions(5, "0123456789");
+    oscPortEditor.onFocusLost = [this]()
+    {
+        int port = oscPortEditor.getText().getIntValue();
+        if (port > 0 && port <= 65535)
+            audioProcessor.setOscPort(port);
+        else
+            oscPortEditor.setText(juce::String(audioProcessor.getOscPort()));
+    };
+    oscPortEditor.onReturnKey = [this]()
+    {
+        int port = oscPortEditor.getText().getIntValue();
+        if (port > 0 && port <= 65535)
+            audioProcessor.setOscPort(port);
+        else
+            oscPortEditor.setText(juce::String(audioProcessor.getOscPort()));
+    };
+    addAndMakeVisible(oscPortEditor);
+
     // Enable button
     enableButton.setButtonText("Enabled");
     enableButton.setToggleState(audioProcessor.isRelayEnabled(), juce::dontSendNotification);
@@ -31,7 +56,7 @@ SpectrumAnalyzerRelayAudioProcessorEditor::SpectrumAnalyzerRelayAudioProcessorEd
     };
     addAndMakeVisible(enableButton);
 
-    setSize(280, 140);
+    setSize(280, 175);
 }
 
 SpectrumAnalyzerRelayAudioProcessorEditor::~SpectrumAnalyzerRelayAudioProcessorEditor()
@@ -53,6 +78,12 @@ void SpectrumAnalyzerRelayAudioProcessorEditor::resized()
     auto row = area.removeFromTop(24);
     trackNameLabel.setBounds(row.removeFromLeft(80));
     trackNameEditor.setBounds(row);
+
+    area.removeFromTop(6);
+
+    row = area.removeFromTop(24);
+    oscPortLabel.setBounds(row.removeFromLeft(80));
+    oscPortEditor.setBounds(row.removeFromLeft(70));
 
     area.removeFromTop(10);
     enableButton.setBounds(area.removeFromTop(24));

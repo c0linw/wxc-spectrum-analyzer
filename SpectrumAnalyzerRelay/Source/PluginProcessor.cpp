@@ -86,6 +86,7 @@ void SpectrumAnalyzerRelayAudioProcessor::prepareToPlay(double sampleRate, int s
 {
     juce::ignoreUnused(samplesPerBlock);
     spectrumProcessor.prepare(sampleRate);
+    connectOSC();
 }
 
 void SpectrumAnalyzerRelayAudioProcessor::releaseResources()
@@ -130,6 +131,10 @@ void SpectrumAnalyzerRelayAudioProcessor::processBlock(juce::AudioBuffer<float>&
     {
         const float* channelData = buffer.getReadPointer(0);
         spectrumProcessor.process(channelData, buffer.getNumSamples());
+
+        // Send spectrum data via OSC when new FFT data is ready
+        if (spectrumProcessor.isSpectrumReady())
+            sendSpectrumViaOSC();
     }
 
     // Audio passes through unchanged - no modification needed since we only read
@@ -145,12 +150,51 @@ juce::AudioProcessorEditor* SpectrumAnalyzerRelayAudioProcessor::createEditor()
     return new SpectrumAnalyzerRelayAudioProcessorEditor(*this);
 }
 
+void SpectrumAnalyzerRelayAudioProcessor::connectOSC()
+{
+    oscSender.disconnect();
+    oscConnected = oscSender.connect("127.0.0.1", oscPort);
+}
+
+void SpectrumAnalyzerRelayAudioProcessor::setOscPort(int port)
+{
+    if (port != oscPort && port > 0 && port <= 65535)
+    {
+        oscPort = port;
+        connectOSC();
+    }
+}
+
+void SpectrumAnalyzerRelayAudioProcessor::sendSpectrumViaOSC()
+{
+    if (!oscConnected.load())
+        return;
+
+    std::array<float, SpectrumConstants::NUM_BINS> spectrum;
+    spectrumProcessor.getSpectrum(spectrum);
+
+    // Build OSC address: /wxc-tools/spectrum/<trackName>
+    juce::String address = SpectrumConstants::OSC_ADDRESS_PREFIX + trackName;
+
+    // Create OSC message with spectrum data
+    // Format: [fftSize, sampleRate, magnitude[0], magnitude[1], ..., magnitude[NUM_BINS-1]]
+    juce::OSCMessage message(address.toRawUTF8());
+    message.addFloat32(static_cast<float>(SpectrumConstants::FFT_SIZE));
+    message.addFloat32(static_cast<float>(spectrumProcessor.getSampleRate()));
+
+    for (int i = 0; i < SpectrumConstants::NUM_BINS; ++i)
+        message.addFloat32(spectrum[static_cast<size_t>(i)]);
+
+    oscSender.send(message);
+}
+
 void SpectrumAnalyzerRelayAudioProcessor::getStateInformation(juce::MemoryBlock& destData)
 {
     // Save state to XML
     juce::XmlElement xml("SpectrumRelayState");
     xml.setAttribute("trackName", trackName);
     xml.setAttribute("relayEnabled", relayEnabled.load());
+    xml.setAttribute("oscPort", oscPort);
     copyXmlToBinary(xml, destData);
 }
 
@@ -162,6 +206,7 @@ void SpectrumAnalyzerRelayAudioProcessor::setStateInformation(const void* data, 
     {
         trackName = xml->getStringAttribute("trackName", "Track");
         relayEnabled = xml->getBoolAttribute("relayEnabled", true);
+        oscPort = xml->getIntAttribute("oscPort", SpectrumConstants::DEFAULT_OSC_PORT);
     }
 }
 

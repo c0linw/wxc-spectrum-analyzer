@@ -2,6 +2,7 @@
 
 #include <JuceHeader.h>
 #include "SpectrumProcessor.h"
+#include "../../Common/SpectrumData.h"
 
 class SpectrumAnalyzerRelayAudioProcessor : public juce::AudioProcessor
 {
@@ -44,11 +45,22 @@ public:
     bool isRelayEnabled() const { return relayEnabled.load(); }
     void setRelayEnabled(bool enabled) { relayEnabled = enabled; }
 
+    int getOscPort() const { return oscPort; }
+    void setOscPort(int port);
+
+    bool isOscConnected() const { return oscConnected.load(); }
+
 private:
+    void connectOSC();
+    void sendSpectrumViaOSC();
     SpectrumProcessor spectrumProcessor;
 
     juce::String trackName { "Track" };
     std::atomic<bool> relayEnabled { true };
+
+    juce::OSCSender oscSender;
+    int oscPort { SpectrumConstants::DEFAULT_OSC_PORT };
+    std::atomic<bool> oscConnected { false };
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(SpectrumAnalyzerRelayAudioProcessor)
 };
