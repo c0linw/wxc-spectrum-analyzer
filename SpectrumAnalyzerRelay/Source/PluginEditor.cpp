@@ -10,17 +10,36 @@ SpectrumAnalyzerRelayAudioProcessorEditor::SpectrumAnalyzerRelayAudioProcessorEd
     titleLabel.setJustificationType(juce::Justification::centred);
     addAndMakeVisible(titleLabel);
 
-    // Track name label
-    trackNameLabel.setText("Track Name:", juce::dontSendNotification);
-    addAndMakeVisible(trackNameLabel);
+    // DAW track name (read-only display)
+    dawTrackNameLabel.setText("DAW Track:", juce::dontSendNotification);
+    dawTrackNameLabel.setJustificationType(juce::Justification::left);
+    addAndMakeVisible(dawTrackNameLabel);
+    
+    dawTrackNameValue.setText(audioProcessor.getDawTrackName(), juce::dontSendNotification);
+    dawTrackNameValue.setJustificationType(juce::Justification::left);
+    dawTrackNameValue.setColour(juce::Label::backgroundColourId, juce::Colour(0xff1a1a1a));
+    dawTrackNameValue.setColour(juce::Label::textColourId, juce::Colours::lightgrey);
+    addAndMakeVisible(dawTrackNameValue);
 
-    // Track name editor
-    trackNameEditor.setText(audioProcessor.getTrackName());
-    trackNameEditor.onTextChange = [this]()
+    // Custom track name checkbox
+    useCustomNameCheckbox.setButtonText("Custom Track Name");
+    useCustomNameCheckbox.setToggleState(audioProcessor.isUsingCustomTrackName(), juce::dontSendNotification);
+    useCustomNameCheckbox.onClick = [this]()
     {
-        audioProcessor.setTrackName(trackNameEditor.getText());
+        bool useCustom = useCustomNameCheckbox.getToggleState();
+        audioProcessor.setUsingCustomTrackName(useCustom);
+        customTrackNameEditor.setEnabled(useCustom);
     };
-    addAndMakeVisible(trackNameEditor);
+    addAndMakeVisible(useCustomNameCheckbox);
+
+    // Custom track name editor (indented under checkbox)
+    customTrackNameEditor.setText(audioProcessor.getCustomTrackName());
+    customTrackNameEditor.setEnabled(audioProcessor.isUsingCustomTrackName());
+    customTrackNameEditor.onTextChange = [this]()
+    {
+        audioProcessor.setCustomTrackName(customTrackNameEditor.getText());
+    };
+    addAndMakeVisible(customTrackNameEditor);
 
     // OSC port label
     oscPortLabel.setText("OSC Port:", juce::dontSendNotification);
@@ -56,11 +75,15 @@ SpectrumAnalyzerRelayAudioProcessorEditor::SpectrumAnalyzerRelayAudioProcessorEd
     };
     addAndMakeVisible(enableButton);
 
-    setSize(280, 175);
+    // Start timer to refresh DAW track name (in case DAW provides it after editor is created)
+    startTimerHz(2);  // Check twice per second
+
+    setSize(300, 240);
 }
 
 SpectrumAnalyzerRelayAudioProcessorEditor::~SpectrumAnalyzerRelayAudioProcessorEditor()
 {
+    stopTimer();
 }
 
 void SpectrumAnalyzerRelayAudioProcessorEditor::paint(juce::Graphics& g)
@@ -75,16 +98,38 @@ void SpectrumAnalyzerRelayAudioProcessorEditor::resized()
     titleLabel.setBounds(area.removeFromTop(30));
     area.removeFromTop(10);
 
+    // DAW track name display
     auto row = area.removeFromTop(24);
-    trackNameLabel.setBounds(row.removeFromLeft(80));
-    trackNameEditor.setBounds(row);
+    dawTrackNameLabel.setBounds(row.removeFromLeft(80));
+    dawTrackNameValue.setBounds(row);
 
     area.removeFromTop(6);
 
+    // Custom name checkbox
+    useCustomNameCheckbox.setBounds(area.removeFromTop(24));
+    
+    area.removeFromTop(2);
+    
+    // Custom name editor (indented)
+    row = area.removeFromTop(24);
+    row.removeFromLeft(20);  // Indent
+    customTrackNameEditor.setBounds(row);
+
+    area.removeFromTop(6);
+
+    // OSC port
     row = area.removeFromTop(24);
     oscPortLabel.setBounds(row.removeFromLeft(80));
     oscPortEditor.setBounds(row.removeFromLeft(70));
 
     area.removeFromTop(10);
     enableButton.setBounds(area.removeFromTop(24));
+}
+
+void SpectrumAnalyzerRelayAudioProcessorEditor::timerCallback()
+{
+    // Update DAW track name display if it changed in the processor (e.g., from DAW)
+    juce::String currentDawName = audioProcessor.getDawTrackName();
+    if (dawTrackNameValue.getText() != currentDawName)
+        dawTrackNameValue.setText(currentDawName, juce::dontSendNotification);
 }

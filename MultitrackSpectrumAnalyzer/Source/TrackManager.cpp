@@ -15,58 +15,66 @@ TrackManager::TrackManager()
 {
 }
 
-void TrackManager::updateTrackPresence(const juce::String& trackName, double sampleRate)
+void TrackManager::updateTrackPresence(const juce::String& trackId, 
+                                       const juce::String& trackName, 
+                                       double sampleRate)
 {
     juce::ScopedLock sl(lock);
 
-    auto it = tracks.find(trackName);
+    auto it = tracks.find(trackId);
     if (it == tracks.end())
     {
         // Create new track (spectrum starts empty)
         TrackData newTrack;
-        newTrack.name = trackName;
+        newTrack.trackId = trackId;
+        newTrack.trackName = trackName;
         newTrack.sampleRate = sampleRate;
         newTrack.colour = getNextColour();
         newTrack.lastUpdateTime = juce::Time::currentTimeMillis();
         newTrack.enabled = true;
 
-        tracks[trackName] = newTrack;
+        tracks[trackId] = newTrack;
     }
     else
     {
-        // Update timestamp only
+        // Update display name and timestamp
+        it->second.trackName = trackName;
         it->second.sampleRate = sampleRate;
         it->second.lastUpdateTime = juce::Time::currentTimeMillis();
     }
 }
 
-void TrackManager::updateTrack(const juce::String& trackName,
+void TrackManager::updateTrack(const juce::String& trackId,
+                                const juce::String& trackName,
                                 const float* spectrumData,
                                 int numBins,
                                 double sampleRate)
 {
     juce::ScopedLock sl(lock);
 
-    auto it = tracks.find(trackName);
+    auto it = tracks.find(trackId);
     if (it == tracks.end())
     {
         // Create new track
         TrackData newTrack;
-        newTrack.name = trackName;
+        newTrack.trackId = trackId;
+        newTrack.trackName = trackName;
         newTrack.sampleRate = sampleRate;
         newTrack.colour = getNextColour();
         newTrack.lastUpdateTime = juce::Time::currentTimeMillis();
+        newTrack.enabled = true;
 
         // Copy spectrum data
         int copySize = juce::jmin(numBins, SpectrumConstants::NUM_BINS);
         for (int i = 0; i < copySize; ++i)
             newTrack.spectrum[static_cast<size_t>(i)] = spectrumData[i];
 
-        tracks[trackName] = newTrack;
+        tracks[trackId] = newTrack;
     }
     else
     {
         // Update existing track
+        it->second.trackName = trackName;
         it->second.sampleRate = sampleRate;
         it->second.lastUpdateTime = juce::Time::currentTimeMillis();
 
@@ -127,11 +135,11 @@ int TrackManager::getTrackCount() const
     return static_cast<int>(tracks.size());
 }
 
-void TrackManager::setTrackEnabled(const juce::String& trackName, bool enabled)
+void TrackManager::setTrackEnabled(const juce::String& trackId, bool enabled)
 {
     juce::ScopedLock sl(lock);
 
-    auto it = tracks.find(trackName);
+    auto it = tracks.find(trackId);
     if (it != tracks.end())
         it->second.enabled = enabled;
 }

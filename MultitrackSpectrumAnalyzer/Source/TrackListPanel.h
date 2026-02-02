@@ -21,7 +21,7 @@ private:
 
     juce::Label titleLabel;
     juce::OwnedArray<juce::ToggleButton> trackButtons;
-    std::vector<juce::String> currentTrackNames;
+    std::vector<juce::String> currentTrackIds;  // Track IDs for change detection
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(TrackListPanel)
 };

@@ -3,6 +3,7 @@
 #include <JuceHeader.h>
 #include "TrackManager.h"
 #include "TrackListPanel.h"
+#include "SpectrumDisplay.h"
 
 class MainComponent : public juce::Component,
                       private juce::OSCReceiver::Listener<juce::OSCReceiver::MessageLoopCallback>,
@@ -26,6 +27,7 @@ private:
     juce::OSCReceiver oscReceiver;
     TrackManager trackManager;
     TrackListPanel trackListPanel;
+    SpectrumDisplay spectrumDisplay;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(MainComponent)
 };

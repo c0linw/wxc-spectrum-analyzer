@@ -3,7 +3,8 @@
 #include <JuceHeader.h>
 #include "PluginProcessor.h"
 
-class SpectrumAnalyzerRelayAudioProcessorEditor : public juce::AudioProcessorEditor
+class SpectrumAnalyzerRelayAudioProcessorEditor : public juce::AudioProcessorEditor,
+                                                   private juce::Timer
 {
 public:
     SpectrumAnalyzerRelayAudioProcessorEditor(SpectrumAnalyzerRelayAudioProcessor&);
@@ -13,11 +14,18 @@ public:
     void resized() override;
 
 private:
+    void timerCallback() override;
     SpectrumAnalyzerRelayAudioProcessor& audioProcessor;
 
     juce::Label titleLabel;
-    juce::Label trackNameLabel;
-    juce::TextEditor trackNameEditor;
+    
+    juce::Label dawTrackNameLabel;
+    juce::Label dawTrackNameValue;     // Shows actual DAW track name (read-only)
+    
+    juce::ToggleButton useCustomNameCheckbox;
+    juce::Label customTrackNameLabel;
+    juce::TextEditor customTrackNameEditor;
+    
     juce::Label oscPortLabel;
     juce::TextEditor oscPortEditor;
     juce::ToggleButton enableButton;

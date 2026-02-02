@@ -5,12 +5,13 @@
 
 struct TrackData
 {
-    juce::String name;
-    std::array<float, SpectrumConstants::NUM_BINS> spectrum {};
-    double sampleRate { 44100.0 };
-    juce::int64 lastUpdateTime { 0 };
+    juce::String trackId;      // Unique identifier (UUID from plugin)
+    juce::String trackName;    // Display name
+    double sampleRate { 0.0 };
     juce::Colour colour;
-    bool enabled { true };  // Whether to display this track's spectrum
+    juce::int64 lastUpdateTime { 0 };
+    std::array<float, SpectrumConstants::NUM_BINS> spectrum { 0.0f };
+    bool enabled { true };
 };
 
 class TrackManager
@@ -18,14 +19,17 @@ class TrackManager
 public:
     TrackManager();
 
-    /// Called when heartbeat received. Creates track if new, updates timestamp.
-    void updateTrackPresence(const juce::String& trackName, double sampleRate);
+    /// Update track presence (called on heartbeat)
+    void updateTrackPresence(const juce::String& trackId, 
+                            const juce::String& trackName, 
+                            double sampleRate);
 
-    /// Called when spectrum OSC message received. Updates spectrum data.
-    void updateTrack(const juce::String& trackName,
-                     const float* spectrumData,
-                     int numBins,
-                     double sampleRate);
+    /// Update track with new spectrum data
+    void updateTrack(const juce::String& trackId,
+                    const juce::String& trackName,
+                    const float* spectrumData,
+                    int numBins,
+                    double sampleRate);
 
     /// Removes tracks that haven't been updated within timeout period.
     void removeStaleTrack();
@@ -38,13 +42,13 @@ public:
 
     int getTrackCount() const;
 
-    /// Enable or disable a track's spectrum display.
-    void setTrackEnabled(const juce::String& trackName, bool enabled);
+    /// Enable or disable a track
+    void setTrackEnabled(const juce::String& trackId, bool enabled);
 
 private:
     juce::Colour getNextColour();
 
-    std::map<juce::String, TrackData> tracks;
+    std::map<juce::String, TrackData> tracks;  // Key is trackId (UUID)
     mutable juce::CriticalSection lock;
     int colourIndex { 0 };
 

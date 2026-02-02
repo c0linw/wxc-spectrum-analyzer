@@ -42,10 +42,6 @@ public:
     // Called by DAW to provide track info (name, colour)
     void updateTrackProperties(const TrackProperties& properties) override;
 
-    // Track configuration accessors
-    juce::String getTrackName() const { return trackName; }
-    void setTrackName(const juce::String& name) { trackName = name; }
-
     bool isRelayEnabled() const { return relayEnabled.load(); }
     void setRelayEnabled(bool enabled) { relayEnabled = enabled; }
 
@@ -54,6 +50,20 @@ public:
 
     bool isOscConnected() const { return oscConnected.load(); }
 
+    // Track naming accessors
+    juce::String getDawTrackName() const { return dawTrackName; }
+    juce::String getCustomTrackName() const { return customTrackName; }
+    void setCustomTrackName(const juce::String& name) { customTrackName = name; }
+    
+    bool isUsingCustomTrackName() const { return useCustomTrackName; }
+    void setUsingCustomTrackName(bool useCustom) { useCustomTrackName = useCustom; }
+    
+    /// Returns the track name to send via OSC (DAW name or custom name based on flag)
+    juce::String getEffectiveTrackName() const 
+    { 
+        return useCustomTrackName ? customTrackName : dawTrackName; 
+    }
+
 private:
     void timerCallback() override;
     void connectOSC();
@@ -61,7 +71,10 @@ private:
     void sendSpectrumViaOSC();
     SpectrumProcessor spectrumProcessor;
 
-    juce::String trackName { "Track" };
+    juce::String trackId;              // Unique identifier (UUID)
+    juce::String dawTrackName;         // Track name from DAW (via updateTrackProperties)
+    juce::String customTrackName;      // User-defined custom name
+    bool useCustomTrackName { false }; // If true, send customTrackName; otherwise send dawTrackName
     std::atomic<bool> relayEnabled { true };
 
     juce::OSCSender oscSender;

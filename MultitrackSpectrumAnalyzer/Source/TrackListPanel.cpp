@@ -51,15 +51,15 @@ void TrackListPanel::rebuildTrackList()
 {
     auto tracks = trackManager.getActiveTracks();
 
-    // Check if track list has changed
-    std::vector<juce::String> newTrackNames;
+    // Check if track list has changed (by track IDs)
+    std::vector<juce::String> newTrackIds;
     for (const auto& track : tracks)
-        newTrackNames.push_back(track.name);
+        newTrackIds.push_back(track.trackId);
 
     // Sort for consistent ordering
-    std::sort(newTrackNames.begin(), newTrackNames.end());
+    std::sort(newTrackIds.begin(), newTrackIds.end());
 
-    if (newTrackNames == currentTrackNames)
+    if (newTrackIds == currentTrackIds)
     {
         // No change in track list, just update button states
         for (int i = 0; i < trackButtons.size() && i < static_cast<int>(tracks.size()); ++i)
@@ -67,9 +67,11 @@ void TrackListPanel::rebuildTrackList()
             // Find matching track and update toggle state without triggering callback
             for (const auto& track : tracks)
             {
-                if (track.name == currentTrackNames[static_cast<size_t>(i)])
+                if (track.trackId == currentTrackIds[static_cast<size_t>(i)])
                 {
                     trackButtons[i]->setToggleState(track.enabled, juce::dontSendNotification);
+                    // Also update button text in case track name changed
+                    trackButtons[i]->setButtonText(track.trackName);
                     break;
                 }
             }
@@ -78,23 +80,23 @@ void TrackListPanel::rebuildTrackList()
     }
 
     // Track list changed, rebuild buttons
-    currentTrackNames = newTrackNames;
+    currentTrackIds = newTrackIds;
     trackButtons.clear();
 
     for (const auto& track : tracks)
     {
-        auto* button = new juce::ToggleButton(track.name);
+        auto* button = new juce::ToggleButton(track.trackName);
         button->setToggleState(track.enabled, juce::dontSendNotification);
 
         // Set colour indicator
         button->setColour(juce::ToggleButton::tickColourId, track.colour);
         button->setColour(juce::ToggleButton::textColourId, juce::Colours::lightgrey);
 
-        // Capture track name for callback
-        juce::String trackName = track.name;
-        button->onClick = [this, trackName, button]()
+        // Capture track ID for callback (use ID, not name)
+        juce::String trackId = track.trackId;
+        button->onClick = [this, trackId, button]()
         {
-            trackManager.setTrackEnabled(trackName, button->getToggleState());
+            trackManager.setTrackEnabled(trackId, button->getToggleState());
         };
 
         addAndMakeVisible(button);

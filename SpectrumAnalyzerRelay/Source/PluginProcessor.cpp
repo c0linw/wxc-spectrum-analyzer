@@ -13,6 +13,13 @@ SpectrumAnalyzerRelayAudioProcessor::SpectrumAnalyzerRelayAudioProcessor()
                          )
 #endif
 {
+    // Generate persistent unique ID for this plugin instance
+    trackId = juce::Uuid().toString();
+    
+    // Default names
+    dawTrackName = "Track " + trackId.substring(0, 8);
+    customTrackName = "Track " + trackId.substring(0, 8);
+    
     // Start heartbeat timer
     startTimer(SpectrumConstants::HEARTBEAT_INTERVAL_MS);
 }
@@ -169,11 +176,12 @@ void SpectrumAnalyzerRelayAudioProcessor::sendHeartbeat()
     if (!oscConnected.load())
         return;
 
-    // Build OSC address: /wxc-tools/heartbeat/<trackName>
-    juce::String address = SpectrumConstants::OSC_HEARTBEAT_PREFIX + trackName;
+    // Build OSC address: /wxc-tools/heartbeat/<trackId>
+    juce::String address = SpectrumConstants::OSC_HEARTBEAT_PREFIX + trackId;
 
-    // Create heartbeat message with minimal data
+    // Create heartbeat message with effective track name and sample rate
     juce::OSCMessage message(address.toRawUTF8());
+    message.addString(getEffectiveTrackName());
     message.addFloat32(static_cast<float>(spectrumProcessor.getSampleRate()));
 
     oscSender.send(message);
@@ -196,12 +204,13 @@ void SpectrumAnalyzerRelayAudioProcessor::sendSpectrumViaOSC()
     std::array<float, SpectrumConstants::NUM_BINS> spectrum;
     spectrumProcessor.getSpectrum(spectrum);
 
-    // Build OSC address: /wxc-tools/spectrum/<trackName>
-    juce::String address = SpectrumConstants::OSC_ADDRESS_PREFIX + trackName;
+    // Build OSC address: /wxc-tools/spectrum/<trackId>
+    juce::String address = SpectrumConstants::OSC_ADDRESS_PREFIX + trackId;
 
     // Create OSC message with spectrum data
-    // Format: [fftSize, sampleRate, magnitude[0], magnitude[1], ..., magnitude[NUM_BINS-1]]
+    // Format: [trackName, fftSize, sampleRate, magnitude[0], magnitude[1], ..., magnitude[NUM_BINS-1]]
     juce::OSCMessage message(address.toRawUTF8());
+    message.addString(getEffectiveTrackName());
     message.addFloat32(static_cast<float>(SpectrumConstants::FFT_SIZE));
     message.addFloat32(static_cast<float>(spectrumProcessor.getSampleRate()));
 
@@ -215,7 +224,10 @@ void SpectrumAnalyzerRelayAudioProcessor::getStateInformation(juce::MemoryBlock&
 {
     // Save state to XML
     juce::XmlElement xml("SpectrumRelayState");
-    xml.setAttribute("trackName", trackName);
+    xml.setAttribute("trackId", trackId);
+    xml.setAttribute("dawTrackName", dawTrackName);
+    xml.setAttribute("customTrackName", customTrackName);
+    xml.setAttribute("useCustomTrackName", useCustomTrackName);
     xml.setAttribute("relayEnabled", relayEnabled.load());
     xml.setAttribute("oscPort", oscPort);
     copyXmlToBinary(xml, destData);
@@ -227,7 +239,25 @@ void SpectrumAnalyzerRelayAudioProcessor::setStateInformation(const void* data, 
     auto xml = getXmlFromBinary(data, sizeInBytes);
     if (xml != nullptr && xml->hasTagName("SpectrumRelayState"))
     {
-        trackName = xml->getStringAttribute("trackName", "Track");
+        trackId = xml->getStringAttribute("trackId");
+        if (trackId.isEmpty())  // Generate if missing (backward compatibility)
+            trackId = juce::Uuid().toString();
+        
+        // Load names with backward compatibility
+        juce::String legacyTrackName = xml->getStringAttribute("trackName", "");
+        if (!legacyTrackName.isEmpty())
+        {
+            // Old format: migrate to new system
+            dawTrackName = legacyTrackName;
+            customTrackName = legacyTrackName;
+        }
+        else
+        {
+            dawTrackName = xml->getStringAttribute("dawTrackName", "Track " + trackId.substring(0, 8));
+            customTrackName = xml->getStringAttribute("customTrackName", "Track " + trackId.substring(0, 8));
+        }
+        
+        useCustomTrackName = xml->getBoolAttribute("useCustomTrackName", false);
         relayEnabled = xml->getBoolAttribute("relayEnabled", true);
         oscPort = xml->getIntAttribute("oscPort", SpectrumConstants::DEFAULT_OSC_PORT);
     }
@@ -235,9 +265,9 @@ void SpectrumAnalyzerRelayAudioProcessor::setStateInformation(const void* data, 
 
 void SpectrumAnalyzerRelayAudioProcessor::updateTrackProperties(const TrackProperties& properties)
 {
-    // Auto-populate track name from DAW if provided
-    if (properties.name.isNotEmpty())
-        trackName = properties.name;
+    // Auto-populate DAW track name if provided
+    if (properties.name.has_value())
+        dawTrackName = *properties.name;
 }
 
 juce::AudioProcessor* JUCE_CALLTYPE createPluginFilter()

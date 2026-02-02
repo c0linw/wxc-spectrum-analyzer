@@ -2,7 +2,8 @@
 #include "../../Common/SpectrumData.h"
 
 MainComponent::MainComponent()
-    : trackListPanel(trackManager)
+    : trackListPanel(trackManager),
+      spectrumDisplay(trackManager)
 {
     // Title label
     titleLabel.setText("Multitrack Spectrum Analyzer", juce::dontSendNotification);
@@ -19,6 +20,9 @@ MainComponent::MainComponent()
 
     // Track list panel (left sidebar)
     addAndMakeVisible(trackListPanel);
+
+    // Spectrum display
+    addAndMakeVisible(spectrumDisplay);
 
     // Start OSC receiver
     if (oscReceiver.connect(SpectrumConstants::DEFAULT_OSC_PORT))
@@ -65,58 +69,61 @@ void MainComponent::resized()
     // Left sidebar for track list
     trackListPanel.setBounds(area.removeFromLeft(180));
 
-    // Remaining area is for spectrum display (Phase 5)
+    // Spectrum display fills remaining area
+    spectrumDisplay.setBounds(area);
 }
 
 void MainComponent::oscMessageReceived(const juce::OSCMessage& message)
 {
     juce::String address = message.getAddressPattern().toString();
 
-    // Handle heartbeat messages: /wxc-tools/heartbeat/<trackName>
+    // Handle heartbeat messages: /wxc-tools/heartbeat/<trackId>
     juce::String heartbeatPrefix = SpectrumConstants::OSC_HEARTBEAT_PREFIX;
     if (address.startsWith(heartbeatPrefix))
     {
-        juce::String trackName = address.substring(heartbeatPrefix.length());
-        if (trackName.isEmpty() || message.size() < 1)
+        juce::String trackId = address.substring(heartbeatPrefix.length());
+        if (trackId.isEmpty() || message.size() < 2)
             return;
 
-        if (!message[0].isFloat32())
+        if (!message[0].isString() || !message[1].isFloat32())
             return;
 
-        double sampleRate = static_cast<double>(message[0].getFloat32());
-        trackManager.updateTrackPresence(trackName, sampleRate);
+        juce::String trackName = message[0].getString();
+        double sampleRate = static_cast<double>(message[1].getFloat32());
+        trackManager.updateTrackPresence(trackId, trackName, sampleRate);
         return;
     }
 
-    // Handle spectrum messages: /wxc-tools/spectrum/<trackName>
+    // Handle spectrum messages: /wxc-tools/spectrum/<trackId>
     juce::String spectrumPrefix = SpectrumConstants::OSC_ADDRESS_PREFIX;
     if (address.startsWith(spectrumPrefix))
     {
-        juce::String trackName = address.substring(spectrumPrefix.length());
-        if (trackName.isEmpty())
+        juce::String trackId = address.substring(spectrumPrefix.length());
+        if (trackId.isEmpty())
             return;
 
-        // Expected format: [fftSize, sampleRate, magnitude[0], ..., magnitude[NUM_BINS-1]]
-        if (message.size() < 3)
+        // Expected format: [trackName, fftSize, sampleRate, magnitude[0], ..., magnitude[NUM_BINS-1]]
+        if (message.size() < 4)
             return;
 
-        if (!message[0].isFloat32() || !message[1].isFloat32())
+        if (!message[0].isString() || !message[1].isFloat32() || !message[2].isFloat32())
             return;
 
-        double sampleRate = static_cast<double>(message[1].getFloat32());
+        juce::String trackName = message[0].getString();
+        double sampleRate = static_cast<double>(message[2].getFloat32());
 
-        // Parse spectrum data
-        int numBins = message.size() - 2;
+        // Parse spectrum data (starts at index 3)
+        int numBins = message.size() - 3;
         std::vector<float> spectrumData(static_cast<size_t>(numBins));
 
         for (int i = 0; i < numBins; ++i)
         {
-            if (message[i + 2].isFloat32())
-                spectrumData[static_cast<size_t>(i)] = message[i + 2].getFloat32();
+            if (message[i + 3].isFloat32())
+                spectrumData[static_cast<size_t>(i)] = message[i + 3].getFloat32();
         }
 
         // Update track manager with spectrum data
-        trackManager.updateTrack(trackName, spectrumData.data(), numBins, sampleRate);
+        trackManager.updateTrack(trackId, trackName, spectrumData.data(), numBins, sampleRate);
     }
 }
 
