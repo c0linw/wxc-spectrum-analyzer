@@ -8,6 +8,10 @@
       <FILE id="LnJ21O" name="MainComponent.h" compile="0" resource="0" file="Source/MainComponent.h"/>
       <FILE id="FQgmT5" name="MainComponent.cpp" compile="1" resource="0"
             file="Source/MainComponent.cpp"/>
+      <FILE id="TmH8k2" name="TrackManager.h" compile="0" resource="0" file="Source/TrackManager.h"/>
+      <FILE id="TmH8k3" name="TrackManager.cpp" compile="1" resource="0" file="Source/TrackManager.cpp"/>
+      <FILE id="TlP4n1" name="TrackListPanel.h" compile="0" resource="0" file="Source/TrackListPanel.h"/>
+      <FILE id="TlP4n2" name="TrackListPanel.cpp" compile="1" resource="0" file="Source/TrackListPanel.cpp"/>
     </GROUP>
   </MAINGROUP>
   <MODULES>

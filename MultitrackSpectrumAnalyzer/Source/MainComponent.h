@@ -1,32 +1,31 @@
 #pragma once
 
 #include <JuceHeader.h>
+#include "TrackManager.h"
+#include "TrackListPanel.h"
 
-//==============================================================================
-/*
-    This component lives inside our window, and this is where you should put all
-    your controls and content.
-*/
-class MainComponent  : public juce::AudioAppComponent
+class MainComponent : public juce::Component,
+                      private juce::OSCReceiver::Listener<juce::OSCReceiver::MessageLoopCallback>,
+                      private juce::Timer
 {
 public:
-    //==============================================================================
     MainComponent();
     ~MainComponent() override;
 
-    //==============================================================================
-    void prepareToPlay (int samplesPerBlockExpected, double sampleRate) override;
-    void getNextAudioBlock (const juce::AudioSourceChannelInfo& bufferToFill) override;
-    void releaseResources() override;
-
-    //==============================================================================
-    void paint (juce::Graphics& g) override;
+    void paint(juce::Graphics& g) override;
     void resized() override;
 
 private:
-    //==============================================================================
-    // Your private member variables go here...
+    void oscMessageReceived(const juce::OSCMessage& message) override;
+    void timerCallback() override;
+    void updateStatusLabel();
 
+    juce::Label titleLabel;
+    juce::Label statusLabel;
 
-    JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (MainComponent)
+    juce::OSCReceiver oscReceiver;
+    TrackManager trackManager;
+    TrackListPanel trackListPanel;
+
+    JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(MainComponent)
 };

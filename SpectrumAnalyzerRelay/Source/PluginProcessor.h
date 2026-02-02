@@ -4,7 +4,8 @@
 #include "SpectrumProcessor.h"
 #include "../../Common/SpectrumData.h"
 
-class SpectrumAnalyzerRelayAudioProcessor : public juce::AudioProcessor
+class SpectrumAnalyzerRelayAudioProcessor : public juce::AudioProcessor,
+                                           private juce::Timer
 {
 public:
     SpectrumAnalyzerRelayAudioProcessor();
@@ -38,6 +39,9 @@ public:
     void getStateInformation(juce::MemoryBlock& destData) override;
     void setStateInformation(const void* data, int sizeInBytes) override;
 
+    // Called by DAW to provide track info (name, colour)
+    void updateTrackProperties(const TrackProperties& properties) override;
+
     // Track configuration accessors
     juce::String getTrackName() const { return trackName; }
     void setTrackName(const juce::String& name) { trackName = name; }
@@ -51,7 +55,9 @@ public:
     bool isOscConnected() const { return oscConnected.load(); }
 
 private:
+    void timerCallback() override;
     void connectOSC();
+    void sendHeartbeat();
     void sendSpectrumViaOSC();
     SpectrumProcessor spectrumProcessor;
 

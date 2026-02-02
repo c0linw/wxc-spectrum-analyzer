@@ -12,6 +12,8 @@ namespace SpectrumConstants
     // OSC configuration
     constexpr int DEFAULT_OSC_PORT = 58964;
     constexpr const char* OSC_ADDRESS_PREFIX = "/wxc-tools/spectrum/";
+    constexpr const char* OSC_HEARTBEAT_PREFIX = "/wxc-tools/heartbeat/";
+    constexpr int HEARTBEAT_INTERVAL_MS = 1000;  // Send heartbeat every 1 second
 
     // Display configuration
     constexpr float MIN_DB = -100.0f;

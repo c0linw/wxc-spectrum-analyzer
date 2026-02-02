@@ -13,10 +13,13 @@ SpectrumAnalyzerRelayAudioProcessor::SpectrumAnalyzerRelayAudioProcessor()
                          )
 #endif
 {
+    // Start heartbeat timer
+    startTimer(SpectrumConstants::HEARTBEAT_INTERVAL_MS);
 }
 
 SpectrumAnalyzerRelayAudioProcessor::~SpectrumAnalyzerRelayAudioProcessor()
 {
+    stopTimer();
 }
 
 const juce::String SpectrumAnalyzerRelayAudioProcessor::getName() const
@@ -156,6 +159,26 @@ void SpectrumAnalyzerRelayAudioProcessor::connectOSC()
     oscConnected = oscSender.connect("127.0.0.1", oscPort);
 }
 
+void SpectrumAnalyzerRelayAudioProcessor::timerCallback()
+{
+    sendHeartbeat();
+}
+
+void SpectrumAnalyzerRelayAudioProcessor::sendHeartbeat()
+{
+    if (!oscConnected.load())
+        return;
+
+    // Build OSC address: /wxc-tools/heartbeat/<trackName>
+    juce::String address = SpectrumConstants::OSC_HEARTBEAT_PREFIX + trackName;
+
+    // Create heartbeat message with minimal data
+    juce::OSCMessage message(address.toRawUTF8());
+    message.addFloat32(static_cast<float>(spectrumProcessor.getSampleRate()));
+
+    oscSender.send(message);
+}
+
 void SpectrumAnalyzerRelayAudioProcessor::setOscPort(int port)
 {
     if (port != oscPort && port > 0 && port <= 65535)
@@ -208,6 +231,13 @@ void SpectrumAnalyzerRelayAudioProcessor::setStateInformation(const void* data, 
         relayEnabled = xml->getBoolAttribute("relayEnabled", true);
         oscPort = xml->getIntAttribute("oscPort", SpectrumConstants::DEFAULT_OSC_PORT);
     }
+}
+
+void SpectrumAnalyzerRelayAudioProcessor::updateTrackProperties(const TrackProperties& properties)
+{
+    // Auto-populate track name from DAW if provided
+    if (properties.name.isNotEmpty())
+        trackName = properties.name;
 }
 
 juce::AudioProcessor* JUCE_CALLTYPE createPluginFilter()
