@@ -39,14 +39,11 @@ void TrackManager::updateTrackPresence(const juce::String& trackId,
     }
     else
     {
-        // Update display name, timestamp, and reset to Active if was offline
+        // Update display name and timestamp (don't reset offline status on heartbeat)
         it->second.trackName = trackName;
         it->second.sampleRate = sampleRate;
         it->second.lastUpdateTime = juce::Time::currentTimeMillis();
-        if (it->second.status == TrackStatus::Offline)
-        {
-            it->second.status = TrackStatus::Active;
-        }
+        // Status will be reset to Active only when spectrum data arrives
     }
 }
 
@@ -57,6 +54,10 @@ void TrackManager::updateTrack(const juce::String& trackId,
                                 double sampleRate)
 {
     juce::ScopedLock sl(lock);
+
+    // Smoothing factor for exponential moving average (0-1)
+    // Lower = more smoothing, Higher = more responsive
+    constexpr float smoothingFactor = 0.25f;
 
     auto it = tracks.find(trackId);
     if (it == tracks.end())
@@ -72,10 +73,13 @@ void TrackManager::updateTrack(const juce::String& trackId,
         newTrack.status = TrackStatus::Active;
         newTrack.enabled = true;
 
-        // Copy spectrum data
+        // Copy spectrum data and initialize smoothed spectrum
         int copySize = juce::jmin(numBins, SpectrumConstants::NUM_BINS);
         for (int i = 0; i < copySize; ++i)
+        {
             newTrack.spectrum[static_cast<size_t>(i)] = spectrumData[i];
+            newTrack.smoothedSpectrum[static_cast<size_t>(i)] = spectrumData[i]; // Initialize with first value
+        }
 
         tracks[trackId] = newTrack;
     }
@@ -86,14 +90,27 @@ void TrackManager::updateTrack(const juce::String& trackId,
         it->second.sampleRate = sampleRate;
         it->second.lastUpdateTime = juce::Time::currentTimeMillis();
         it->second.lastSpectrumTime = juce::Time::currentTimeMillis();
-        if (it->second.status == TrackStatus::Offline)
+
+        bool wasOffline = (it->second.status == TrackStatus::Offline);
+        if (wasOffline)
         {
             it->second.status = TrackStatus::Active;
         }
 
         int copySize = juce::jmin(numBins, SpectrumConstants::NUM_BINS);
         for (int i = 0; i < copySize; ++i)
+        {
             it->second.spectrum[static_cast<size_t>(i)] = spectrumData[i];
+
+            // Apply exponential moving average smoothing
+            // If just came back online, reset smoothed value to avoid jump from zero
+            if (wasOffline)
+                it->second.smoothedSpectrum[static_cast<size_t>(i)] = spectrumData[i];
+            else
+                it->second.smoothedSpectrum[static_cast<size_t>(i)] =
+                    smoothingFactor * spectrumData[i] +
+                    (1.0f - smoothingFactor) * it->second.smoothedSpectrum[static_cast<size_t>(i)];
+        }
     }
 }
 
@@ -101,12 +118,15 @@ void TrackManager::updateStaleTrack()
 {
     juce::ScopedLock sl(lock);
 
+    // Decay factor for offline tracks (should match smoothing factor for consistency)
+    constexpr float decayFactor = 0.75f;  // 1.0 - smoothingFactor
+
     juce::int64 now = juce::Time::currentTimeMillis();
 
     for (auto& pair : tracks)
     {
         auto& track = pair.second;
-        
+
         // Check time since last SPECTRUM data (not heartbeat)
         juce::int64 timeSinceSpectrum = (track.lastSpectrumTime > 0) ? (now - track.lastSpectrumTime) : 0;
 
@@ -116,11 +136,18 @@ void TrackManager::updateStaleTrack()
             if (track.lastSpectrumTime > 0 && timeSinceSpectrum > SpectrumConstants::TRACK_TIMEOUT_MS)
             {
                 track.status = TrackStatus::Offline;
-                // Zero out spectrum to show flat line
+                // Zero out raw spectrum but let smoothed spectrum decay naturally
                 track.spectrum.fill(0.0f);
             }
         }
-        // Offline tracks stay offline (and zeroed) until spectrum data received
+        else if (track.status == TrackStatus::Offline)
+        {
+            // Apply exponential decay to smoothed spectrum while offline
+            for (size_t i = 0; i < track.smoothedSpectrum.size(); ++i)
+            {
+                track.smoothedSpectrum[i] *= decayFactor;
+            }
+        }
     }
 }
 

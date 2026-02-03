@@ -14,7 +14,8 @@ struct TrackData
     juce::int64 lastUpdateTime { 0 };       // Last heartbeat or spectrum update
     juce::int64 lastSpectrumTime { 0 };     // Last spectrum data update (for offline detection)
     TrackStatus status { TrackStatus::Active };
-    std::array<float, SpectrumConstants::NUM_BINS> spectrum { 0.0f };
+    std::array<float, SpectrumConstants::NUM_BINS> spectrum { 0.0f };         // Raw spectrum data
+    std::array<float, SpectrumConstants::NUM_BINS> smoothedSpectrum { 0.0f }; // Temporally smoothed for display
     bool enabled { true };
 };
 

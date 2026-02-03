@@ -70,13 +70,16 @@ void TrackListPanel::rebuildTrackList()
                 if (track.trackId == currentTrackIds[static_cast<size_t>(i)])
                 {
                     trackButtons[i]->setToggleState(track.enabled, juce::dontSendNotification);
-                    
-                    // Update button text with status indicator
-                    juce::String displayText = track.trackName;
+
+                    // Update button text (without status suffix)
+                    trackButtons[i]->setButtonText(track.trackName);
+
+                    // Indicate offline status with grayed-out text color
                     if (track.status == TrackStatus::Offline)
-                        displayText += " (Offline)";
-                    
-                    trackButtons[i]->setButtonText(displayText);
+                        trackButtons[i]->setColour(juce::ToggleButton::textColourId, juce::Colours::grey);
+                    else
+                        trackButtons[i]->setColour(juce::ToggleButton::textColourId, juce::Colours::lightgrey);
+
                     break;
                 }
             }
@@ -90,17 +93,18 @@ void TrackListPanel::rebuildTrackList()
 
     for (const auto& track : tracks)
     {
-        // Create display text with status indicator
-        juce::String displayText = track.trackName;
-        if (track.status == TrackStatus::Offline)
-            displayText += " (Offline)";
-        
-        auto* button = new juce::ToggleButton(displayText);
+        // Create button with track name (without status suffix)
+        auto* button = new juce::ToggleButton(track.trackName);
         button->setToggleState(track.enabled, juce::dontSendNotification);
 
         // Set colour indicator
         button->setColour(juce::ToggleButton::tickColourId, track.colour);
-        button->setColour(juce::ToggleButton::textColourId, juce::Colours::lightgrey);
+
+        // Indicate offline status with grayed-out text color
+        if (track.status == TrackStatus::Offline)
+            button->setColour(juce::ToggleButton::textColourId, juce::Colours::grey);
+        else
+            button->setColour(juce::ToggleButton::textColourId, juce::Colours::lightgrey);
 
         // Capture track ID for callback (use ID, not name)
         juce::String trackId = track.trackId;

@@ -88,12 +88,21 @@ float SpectrumDisplay::magnitudeToY(float magnitude, float height) const
 
 void SpectrumDisplay::drawSpectrum(juce::Graphics& g, const TrackData& track, juce::Rectangle<float> area)
 {
-    juce::Path spectrumPath;
-    bool pathStarted = false;
-
     float plotWidth = area.getWidth();
     float plotHeight = area.getHeight();
 
+    // Build array of point data with peak-holding for densely packed bins
+    struct SpectrumPoint
+    {
+        float x;
+        float y;
+        float magnitude;
+    };
+
+    std::vector<SpectrumPoint> points;
+    points.reserve(SpectrumConstants::NUM_BINS);
+
+    // Collect all visible bins
     for (int bin = 0; bin < SpectrumConstants::NUM_BINS; ++bin)
     {
         float frequency = static_cast<float>(bin) * static_cast<float>(track.sampleRate) / static_cast<float>(SpectrumConstants::FFT_SIZE);
@@ -102,23 +111,77 @@ void SpectrumDisplay::drawSpectrum(juce::Graphics& g, const TrackData& track, ju
         if (frequency < minFrequency || frequency > maxFrequency)
             continue;
 
+        float magnitude = track.smoothedSpectrum[static_cast<size_t>(bin)];
         float x = area.getX() + binToX(bin, plotWidth, track.sampleRate);
-        float y = area.getY() + magnitudeToY(track.spectrum[static_cast<size_t>(bin)], plotHeight);
+        float y = area.getY() + magnitudeToY(magnitude, plotHeight);
 
-        if (!pathStarted)
+        points.push_back({x, y, magnitude});
+    }
+
+    if (points.empty())
+        return;
+
+    // Apply peak-hold: merge points that are very close in x-space, keeping the peak
+    std::vector<SpectrumPoint> mergedPoints;
+    mergedPoints.reserve(points.size());
+
+    constexpr float minPixelSpacing = 2.0f; // Minimum pixels between points
+
+    mergedPoints.push_back(points[0]);
+
+    for (size_t i = 1; i < points.size(); ++i)
+    {
+        float dx = points[i].x - mergedPoints.back().x;
+
+        if (dx < minPixelSpacing)
         {
-            spectrumPath.startNewSubPath(x, y);
-            pathStarted = true;
+            // Points are close together - keep the peak (higher magnitude = lower y)
+            if (points[i].magnitude > mergedPoints.back().magnitude)
+            {
+                mergedPoints.back() = points[i];
+            }
         }
         else
         {
-            spectrumPath.lineTo(x, y);
+            mergedPoints.push_back(points[i]);
         }
     }
 
-    if (pathStarted)
+    // Draw smooth curve using quadratic interpolation for smoother appearance
+    juce::Path spectrumPath;
+
+    if (mergedPoints.size() > 0)
     {
-        // Flat line naturally appears for offline tracks (zeroed spectrum)
+        spectrumPath.startNewSubPath(mergedPoints[0].x, mergedPoints[0].y);
+
+        if (mergedPoints.size() == 1)
+        {
+            // Just one point, nothing to draw
+        }
+        else if (mergedPoints.size() == 2)
+        {
+            // Just draw a line
+            spectrumPath.lineTo(mergedPoints[1].x, mergedPoints[1].y);
+        }
+        else
+        {
+            // Use quadratic curves for smooth interpolation
+            for (size_t i = 1; i < mergedPoints.size() - 1; ++i)
+            {
+                // Control point is the current point
+                // End point is halfway to the next point
+                float endX = (mergedPoints[i].x + mergedPoints[i + 1].x) * 0.5f;
+                float endY = (mergedPoints[i].y + mergedPoints[i + 1].y) * 0.5f;
+
+                spectrumPath.quadraticTo(mergedPoints[i].x, mergedPoints[i].y, endX, endY);
+            }
+
+            // Draw final segment to last point
+            size_t lastIdx = mergedPoints.size() - 1;
+            spectrumPath.quadraticTo(mergedPoints[lastIdx].x, mergedPoints[lastIdx].y,
+                                     mergedPoints[lastIdx].x, mergedPoints[lastIdx].y);
+        }
+
         g.setColour(track.colour);
         g.strokePath(spectrumPath, juce::PathStrokeType(1.5f));
     }
