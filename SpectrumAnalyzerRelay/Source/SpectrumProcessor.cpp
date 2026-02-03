@@ -53,10 +53,13 @@ void SpectrumProcessor::processFFT()
 
     // Convert to magnitude spectrum (normalized)
     const float maxMagnitude = static_cast<float>(SpectrumConstants::FFT_SIZE);
+    constexpr float windowCompensation = 2.0f;  // Hann window coherent gain correction
+
     for (int i = 0; i < SpectrumConstants::NUM_BINS; ++i)
     {
         // fftData now contains magnitudes after performFrequencyOnlyForwardTransform
-        float magnitude = fftData[i] / maxMagnitude;
+        // Normalize by FFT size and compensate for Hann window amplitude reduction
+        float magnitude = (fftData[i] / maxMagnitude) * windowCompensation;
         magnitudeSpectrum[i] = magnitude;
     }
 

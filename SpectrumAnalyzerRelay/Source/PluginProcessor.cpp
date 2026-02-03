@@ -136,11 +136,31 @@ void SpectrumAnalyzerRelayAudioProcessor::processBlock(juce::AudioBuffer<float>&
     for (auto i = totalNumInputChannels; i < totalNumOutputChannels; ++i)
         buffer.clear(i, 0, buffer.getNumSamples());
 
-    // Process FFT if relay is enabled (using first channel only for analysis)
+    // Process FFT if relay is enabled
     if (relayEnabled.load() && totalNumInputChannels > 0)
     {
-        const float* channelData = buffer.getReadPointer(0);
-        spectrumProcessor.process(channelData, buffer.getNumSamples());
+        // For stereo, sum both channels to mono for analysis
+        // For mono, just use the single channel
+        if (totalNumInputChannels == 1)
+        {
+            // Mono input
+            const float* channelData = buffer.getReadPointer(0);
+            spectrumProcessor.process(channelData, buffer.getNumSamples());
+        }
+        else
+        {
+            // Stereo input - average to mono
+            monoBuffer.resize(buffer.getNumSamples());
+            const float* leftChannel = buffer.getReadPointer(0);
+            const float* rightChannel = buffer.getReadPointer(1);
+
+            for (int i = 0; i < buffer.getNumSamples(); ++i)
+            {
+                monoBuffer[i] = (leftChannel[i] + rightChannel[i]) * 0.5f;
+            }
+
+            spectrumProcessor.process(monoBuffer.data(), buffer.getNumSamples());
+        }
 
         // Send spectrum data via OSC when new FFT data is ready
         if (spectrumProcessor.isSpectrumReady())

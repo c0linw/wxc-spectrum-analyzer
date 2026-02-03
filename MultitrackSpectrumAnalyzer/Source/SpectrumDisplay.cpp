@@ -13,6 +13,18 @@ SpectrumDisplay::~SpectrumDisplay()
     stopTimer();
 }
 
+void SpectrumDisplay::setDisplayMode(DisplayMode mode)
+{
+    displayMode = mode;
+    repaint();
+}
+
+void SpectrumDisplay::setDbScaling(DbScaling scaling)
+{
+    dbScaling = scaling;
+    repaint();
+}
+
 void SpectrumDisplay::paint(juce::Graphics& g)
 {
     g.fillAll(juce::Colour(0xff1a1a1a));
@@ -32,10 +44,35 @@ void SpectrumDisplay::paint(juce::Graphics& g)
     g.drawRect(plotArea, 1.0f);
 
     // Draw spectrums for enabled tracks
-    for (const auto& track : cachedTracks)
+    if (displayMode == DisplayMode::Overlay)
     {
-        if (track.enabled)
-            drawSpectrum(g, track, plotArea);
+        // Overlay mode: draw each track independently from bottom
+        for (const auto& track : cachedTracks)
+        {
+            if (track.enabled)
+                drawSpectrum(g, track, plotArea, nullptr);
+        }
+    }
+    else if (displayMode == DisplayMode::Stacked)
+    {
+        // Stacked mode: accumulate spectrums
+        std::array<float, SpectrumConstants::NUM_BINS> accumulatedSpectrum;
+        accumulatedSpectrum.fill(0.0f);
+
+        for (const auto& track : cachedTracks)
+        {
+            if (track.enabled)
+            {
+                // Draw this track starting from accumulated baseline
+                drawSpectrum(g, track, plotArea, &accumulatedSpectrum);
+
+                // Add this track's spectrum to the accumulator
+                for (size_t i = 0; i < SpectrumConstants::NUM_BINS; ++i)
+                {
+                    accumulatedSpectrum[i] += track.smoothedSpectrum[i];
+                }
+            }
+        }
     }
 }
 
@@ -81,12 +118,22 @@ float SpectrumDisplay::magnitudeToY(float magnitude, float height) const
     // Clamp to display range
     db = juce::jlimit(minDb, maxDb, db);
 
-    // Map dB to y-coordinate (0 dB at top, minDb at bottom)
+    // Normalize dB to 0-1 range (1.0 = loud/0dB, 0.0 = quiet/-90dB)
     float normalized = (db - minDb) / (maxDb - minDb);
+
+    // Apply scaling based on mode
+    if (dbScaling == DbScaling::Compressed)
+    {
+        // Apply compression to lower volumes (power curve)
+        // This makes low volumes take up less vertical space (compressed toward bottom)
+        normalized = std::pow(normalized, 2.0f);  // Square for compression
+    }
+
+    // Map to y-coordinate (0 dB at top, minDb at bottom)
     return height * (1.0f - normalized);
 }
 
-void SpectrumDisplay::drawSpectrum(juce::Graphics& g, const TrackData& track, juce::Rectangle<float> area)
+void SpectrumDisplay::drawSpectrum(juce::Graphics& g, const TrackData& track, juce::Rectangle<float> area, const std::array<float, SpectrumConstants::NUM_BINS>* baselineSpectrum)
 {
     float plotWidth = area.getWidth();
     float plotHeight = area.getHeight();
@@ -111,7 +158,13 @@ void SpectrumDisplay::drawSpectrum(juce::Graphics& g, const TrackData& track, ju
         if (frequency < minFrequency || frequency > maxFrequency)
             continue;
 
+        // Calculate magnitude: baseline + this track's contribution
         float magnitude = track.smoothedSpectrum[static_cast<size_t>(bin)];
+        if (baselineSpectrum != nullptr)
+        {
+            magnitude += (*baselineSpectrum)[static_cast<size_t>(bin)];
+        }
+
         float x = area.getX() + binToX(bin, plotWidth, track.sampleRate);
         float y = area.getY() + magnitudeToY(magnitude, plotHeight);
 

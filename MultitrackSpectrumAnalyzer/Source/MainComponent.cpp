@@ -18,6 +18,9 @@ MainComponent::MainComponent()
     statusLabel.setColour(juce::Label::textColourId, juce::Colours::lightgrey);
     addAndMakeVisible(statusLabel);
 
+    // Setup display control dropdowns
+    setupDisplayControls();
+
     // Track list panel (left sidebar)
     addAndMakeVisible(trackListPanel);
 
@@ -62,6 +65,19 @@ void MainComponent::resized()
 
     // Title at top
     titleLabel.setBounds(area.removeFromTop(50));
+
+    // Control bar below title
+    auto controlArea = area.removeFromTop(35);
+    controlArea.reduce(10, 5);
+
+    // Display mode dropdown (left side)
+    displayModeLabel.setBounds(controlArea.removeFromLeft(90));
+    displayModeCombo.setBounds(controlArea.removeFromLeft(120));
+    controlArea.removeFromLeft(20); // Spacing
+
+    // dB scaling dropdown (left side)
+    dbScalingLabel.setBounds(controlArea.removeFromLeft(80));
+    dbScalingCombo.setBounds(controlArea.removeFromLeft(120));
 
     // Status bar at bottom
     statusLabel.setBounds(area.removeFromBottom(30).reduced(10, 0));
@@ -139,4 +155,51 @@ void MainComponent::updateStatusLabel()
     juce::String statusText = "Listening on port " + juce::String(SpectrumConstants::DEFAULT_OSC_PORT);
     statusText += " | Active tracks: " + juce::String(trackCount);
     statusLabel.setText(statusText, juce::dontSendNotification);
+}
+
+void MainComponent::setupDisplayControls()
+{
+    // Display mode label and combo
+    displayModeLabel.setText("Display Mode:", juce::dontSendNotification);
+    displayModeLabel.setFont(juce::FontOptions(13.0f));
+    displayModeLabel.setColour(juce::Label::textColourId, juce::Colours::lightgrey);
+    displayModeLabel.setJustificationType(juce::Justification::centredRight);
+    addAndMakeVisible(displayModeLabel);
+
+    displayModeCombo.addItem("Overlay", 1);
+    displayModeCombo.addItem("Stacked", 2);
+    displayModeCombo.setSelectedId(1, juce::dontSendNotification);
+    displayModeCombo.onChange = [this]() { onDisplayModeChanged(); };
+    addAndMakeVisible(displayModeCombo);
+
+    // dB scaling label and combo
+    dbScalingLabel.setText("dB Scale:", juce::dontSendNotification);
+    dbScalingLabel.setFont(juce::FontOptions(13.0f));
+    dbScalingLabel.setColour(juce::Label::textColourId, juce::Colours::lightgrey);
+    dbScalingLabel.setJustificationType(juce::Justification::centredRight);
+    addAndMakeVisible(dbScalingLabel);
+
+    dbScalingCombo.addItem("Linear", 1);
+    dbScalingCombo.addItem("Compressed", 2);
+    dbScalingCombo.setSelectedId(1, juce::dontSendNotification);
+    dbScalingCombo.onChange = [this]() { onDbScalingChanged(); };
+    addAndMakeVisible(dbScalingCombo);
+}
+
+void MainComponent::onDisplayModeChanged()
+{
+    int selectedId = displayModeCombo.getSelectedId();
+    if (selectedId == 1)
+        spectrumDisplay.setDisplayMode(DisplayMode::Overlay);
+    else if (selectedId == 2)
+        spectrumDisplay.setDisplayMode(DisplayMode::Stacked);
+}
+
+void MainComponent::onDbScalingChanged()
+{
+    int selectedId = dbScalingCombo.getSelectedId();
+    if (selectedId == 1)
+        spectrumDisplay.setDbScaling(DbScaling::Linear);
+    else if (selectedId == 2)
+        spectrumDisplay.setDbScaling(DbScaling::Compressed);
 }

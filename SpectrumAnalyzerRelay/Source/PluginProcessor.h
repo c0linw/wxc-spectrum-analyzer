@@ -81,5 +81,8 @@ private:
     int oscPort { SpectrumConstants::DEFAULT_OSC_PORT };
     std::atomic<bool> oscConnected { false };
 
+    // Temporary buffer for summing stereo to mono
+    std::vector<float> monoBuffer;
+
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(SpectrumAnalyzerRelayAudioProcessor)
 };

@@ -20,9 +20,17 @@ private:
     void oscMessageReceived(const juce::OSCMessage& message) override;
     void timerCallback() override;
     void updateStatusLabel();
+    void setupDisplayControls();
+    void onDisplayModeChanged();
+    void onDbScalingChanged();
 
     juce::Label titleLabel;
     juce::Label statusLabel;
+
+    juce::Label displayModeLabel;
+    juce::ComboBox displayModeCombo;
+    juce::Label dbScalingLabel;
+    juce::ComboBox dbScalingCombo;
 
     juce::OSCReceiver oscReceiver;
     TrackManager trackManager;

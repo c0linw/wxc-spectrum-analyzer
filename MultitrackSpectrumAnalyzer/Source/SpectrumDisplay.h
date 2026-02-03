@@ -3,6 +3,18 @@
 #include <JuceHeader.h>
 #include "TrackManager.h"
 
+enum class DisplayMode
+{
+    Overlay,    // All tracks start from bottom (default)
+    Stacked     // Stack tracks on top of each other (cumulative)
+};
+
+enum class DbScaling
+{
+    Linear,     // Linear dB scale (default)
+    Compressed  // Compressed scale for low volumes
+};
+
 class SpectrumDisplay : public juce::Component,
                         private juce::Timer
 {
@@ -12,6 +24,9 @@ public:
 
     void paint(juce::Graphics& g) override;
     void resized() override;
+
+    void setDisplayMode(DisplayMode mode);
+    void setDbScaling(DbScaling scaling);
 
 private:
     void timerCallback() override;
@@ -26,7 +41,7 @@ private:
     float magnitudeToY(float magnitude, float height) const;
 
     /// Draw single track's spectrum curve.
-    void drawSpectrum(juce::Graphics& g, const TrackData& track, juce::Rectangle<float> area);
+    void drawSpectrum(juce::Graphics& g, const TrackData& track, juce::Rectangle<float> area, const std::array<float, SpectrumConstants::NUM_BINS>* baselineSpectrum = nullptr);
 
     /// Draw frequency axis labels and grid lines.
     void drawFrequencyAxis(juce::Graphics& g, juce::Rectangle<float> area);
@@ -36,6 +51,9 @@ private:
 
     TrackManager& trackManager;
     std::vector<TrackData> cachedTracks;
+
+    DisplayMode displayMode { DisplayMode::Overlay };
+    DbScaling dbScaling { DbScaling::Linear };
 
     // Display range
     static constexpr float minFrequency = 20.0f;
