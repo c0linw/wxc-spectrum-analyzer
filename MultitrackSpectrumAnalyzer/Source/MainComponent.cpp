@@ -41,7 +41,8 @@ MainComponent::MainComponent()
     }
 
     // Start timer for stale track removal and status updates
-    startTimerHz(2);
+    // 30Hz provides smooth visual updates and consistent decay with active tracks
+    startTimerHz(30);
 
     setSize(800, 600);
 }

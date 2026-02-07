@@ -118,9 +118,9 @@ void TrackManager::updateStaleTrack()
 {
     juce::ScopedLock sl(lock);
 
-    // Decay factor for offline tracks (lower = faster decay)
-    // At 2Hz update rate: 0.5 reaches ~1% in ~3.3 seconds, 0.4 in ~2.5 seconds
-    constexpr float decayFactor = 0.5f;
+    // Use same decay factor as active tracks for consistent visual appearance
+    // This is 1.0 - smoothingFactor (0.25) from active track smoothing
+    constexpr float decayFactor = 0.75f;
 
     juce::int64 now = juce::Time::currentTimeMillis();
 
