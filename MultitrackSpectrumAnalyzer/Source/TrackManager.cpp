@@ -118,8 +118,9 @@ void TrackManager::updateStaleTrack()
 {
     juce::ScopedLock sl(lock);
 
-    // Decay factor for offline tracks (should match smoothing factor for consistency)
-    constexpr float decayFactor = 0.75f;  // 1.0 - smoothingFactor
+    // Decay factor for offline tracks (lower = faster decay)
+    // At 2Hz update rate: 0.5 reaches ~1% in ~3.3 seconds, 0.4 in ~2.5 seconds
+    constexpr float decayFactor = 0.5f;
 
     juce::int64 now = juce::Time::currentTimeMillis();
 
@@ -164,6 +165,47 @@ std::vector<TrackData> TrackManager::getActiveTracks() const
     return result;
 }
 
+std::vector<TrackData> TrackManager::getActiveTracksOrdered() const
+{
+    juce::ScopedLock sl(lock);
+
+    std::vector<TrackData> result;
+    result.reserve(tracks.size());
+
+    if (customTrackOrder.empty())
+    {
+        // Use alphabetical order
+        for (const auto& pair : tracks)
+            result.push_back(pair.second);
+        std::sort(result.begin(), result.end(),
+                  [](const TrackData& a, const TrackData& b) {
+                      return a.trackId < b.trackId;
+                  });
+    }
+    else
+    {
+        // Use custom order
+        for (const auto& trackId : customTrackOrder)
+        {
+            auto it = tracks.find(trackId);
+            if (it != tracks.end())
+                result.push_back(it->second);
+        }
+
+        // Append any new tracks not in custom order
+        for (const auto& pair : tracks)
+        {
+            if (std::find(customTrackOrder.begin(), customTrackOrder.end(),
+                         pair.first) == customTrackOrder.end())
+            {
+                result.push_back(pair.second);
+            }
+        }
+    }
+
+    return result;
+}
+
 std::vector<TrackData> TrackManager::getEnabledTracks() const
 {
     juce::ScopedLock sl(lock);
@@ -193,6 +235,38 @@ void TrackManager::setTrackEnabled(const juce::String& trackId, bool enabled)
     auto it = tracks.find(trackId);
     if (it != tracks.end())
         it->second.enabled = enabled;
+}
+
+void TrackManager::setTrackColour(const juce::String& trackId, const juce::Colour& colour)
+{
+    juce::ScopedLock sl(lock);
+
+    auto it = tracks.find(trackId);
+    if (it != tracks.end())
+        it->second.colour = colour;
+}
+
+void TrackManager::reorderTrack(const juce::String& trackId, int newIndex)
+{
+    juce::ScopedLock sl(lock);
+
+    // Initialize custom order on first reorder
+    if (customTrackOrder.empty())
+    {
+        // Get current alphabetical order
+        for (const auto& pair : tracks)
+            customTrackOrder.push_back(pair.first);
+        std::sort(customTrackOrder.begin(), customTrackOrder.end());
+    }
+
+    // Remove from current position
+    auto it = std::find(customTrackOrder.begin(), customTrackOrder.end(), trackId);
+    if (it != customTrackOrder.end())
+        customTrackOrder.erase(it);
+
+    // Insert at new position
+    newIndex = juce::jlimit(0, static_cast<int>(customTrackOrder.size()), newIndex);
+    customTrackOrder.insert(customTrackOrder.begin() + newIndex, trackId);
 }
 
 juce::Colour TrackManager::getNextColour()

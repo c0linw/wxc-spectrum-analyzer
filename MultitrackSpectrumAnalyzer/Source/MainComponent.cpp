@@ -7,9 +7,9 @@ MainComponent::MainComponent()
 {
     // Title label
     titleLabel.setText("Multitrack Spectrum Analyzer", juce::dontSendNotification);
-    titleLabel.setFont(juce::FontOptions(24.0f, juce::Font::bold));
+    titleLabel.setFont(juce::FontOptions(24.0f, juce::Font::plain));
     titleLabel.setJustificationType(juce::Justification::centred);
-    titleLabel.setColour(juce::Label::textColourId, juce::Colours::white);
+    titleLabel.setColour(juce::Label::textColourId, juce::Colour(0xffc0c0c0));
     addAndMakeVisible(titleLabel);
 
     // Status label
@@ -82,8 +82,8 @@ void MainComponent::resized()
     // Status bar at bottom
     statusLabel.setBounds(area.removeFromBottom(30).reduced(10, 0));
 
-    // Left sidebar for track list
-    trackListPanel.setBounds(area.removeFromLeft(180));
+    // Left sidebar for track list (resizable)
+    trackListPanel.setBounds(area.removeFromLeft(trackListPanel.getPreferredWidth()));
 
     // Spectrum display fills remaining area
     spectrumDisplay.setBounds(area);

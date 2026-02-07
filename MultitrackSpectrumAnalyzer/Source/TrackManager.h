@@ -42,6 +42,9 @@ public:
     /// Returns list of currently active tracks (thread-safe copy).
     std::vector<TrackData> getActiveTracks() const;
 
+    /// Returns list of tracks in custom order (or alphabetical if no custom order set)
+    std::vector<TrackData> getActiveTracksOrdered() const;
+
     /// Returns list of enabled tracks only (for spectrum display).
     std::vector<TrackData> getEnabledTracks() const;
 
@@ -50,12 +53,20 @@ public:
     /// Enable or disable a track
     void setTrackEnabled(const juce::String& trackId, bool enabled);
 
+    /// Set custom color for a track
+    void setTrackColour(const juce::String& trackId, const juce::Colour& colour);
+
+    /// Reorder track to new position
+    void reorderTrack(const juce::String& trackId, int newIndex);
+
 private:
     juce::Colour getNextColour();
 
     std::map<juce::String, TrackData> tracks;  // Key is trackId (UUID)
     mutable juce::CriticalSection lock;
     int colourIndex { 0 };
+
+    std::vector<juce::String> customTrackOrder;  // Empty = alphabetical
 
     // Predefined colour palette for tracks
     static const std::array<juce::Colour, 8> trackColours;
