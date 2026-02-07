@@ -15,8 +15,8 @@ TrackManager::TrackManager()
 {
 }
 
-void TrackManager::updateTrackPresence(const juce::String& trackId, 
-                                       const juce::String& trackName, 
+void TrackManager::updateTrackPresence(const juce::String& trackId,
+                                       const juce::String& trackName,
                                        double sampleRate)
 {
     juce::ScopedLock sl(lock);
@@ -36,6 +36,9 @@ void TrackManager::updateTrackPresence(const juce::String& trackId,
         newTrack.enabled = true;
 
         tracks[trackId] = newTrack;
+
+        // Add to insertion order list (always at the end)
+        customTrackOrder.push_back(trackId);
     }
     else
     {
@@ -82,6 +85,9 @@ void TrackManager::updateTrack(const juce::String& trackId,
         }
 
         tracks[trackId] = newTrack;
+
+        // Add to insertion order list (always at the end)
+        customTrackOrder.push_back(trackId);
     }
     else
     {
@@ -172,35 +178,12 @@ std::vector<TrackData> TrackManager::getActiveTracksOrdered() const
     std::vector<TrackData> result;
     result.reserve(tracks.size());
 
-    if (customTrackOrder.empty())
+    // Always use customTrackOrder (which tracks insertion/manual order)
+    for (const auto& trackId : customTrackOrder)
     {
-        // Use alphabetical order
-        for (const auto& pair : tracks)
-            result.push_back(pair.second);
-        std::sort(result.begin(), result.end(),
-                  [](const TrackData& a, const TrackData& b) {
-                      return a.trackId < b.trackId;
-                  });
-    }
-    else
-    {
-        // Use custom order
-        for (const auto& trackId : customTrackOrder)
-        {
-            auto it = tracks.find(trackId);
-            if (it != tracks.end())
-                result.push_back(it->second);
-        }
-
-        // Append any new tracks not in custom order
-        for (const auto& pair : tracks)
-        {
-            if (std::find(customTrackOrder.begin(), customTrackOrder.end(),
-                         pair.first) == customTrackOrder.end())
-            {
-                result.push_back(pair.second);
-            }
-        }
+        auto it = tracks.find(trackId);
+        if (it != tracks.end())
+            result.push_back(it->second);
     }
 
     return result;
@@ -249,15 +232,6 @@ void TrackManager::setTrackColour(const juce::String& trackId, const juce::Colou
 void TrackManager::reorderTrack(const juce::String& trackId, int newIndex)
 {
     juce::ScopedLock sl(lock);
-
-    // Initialize custom order on first reorder
-    if (customTrackOrder.empty())
-    {
-        // Get current alphabetical order
-        for (const auto& pair : tracks)
-            customTrackOrder.push_back(pair.first);
-        std::sort(customTrackOrder.begin(), customTrackOrder.end());
-    }
 
     // Remove from current position
     auto it = std::find(customTrackOrder.begin(), customTrackOrder.end(), trackId);
