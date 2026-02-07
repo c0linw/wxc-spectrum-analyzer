@@ -1,7 +1,8 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
 <JUCERPROJECT id="uJ83bX" name="MultitrackSpectrumAnalyzer" projectType="guiapp"
-              useAppConfig="0" addUsingNamespaceToJuceHeader="0" jucerFormatVersion="1">
+              useAppConfig="0" addUsingNamespaceToJuceHeader="0" jucerFormatVersion="1"
+              companyName="c0linw">
   <MAINGROUP id="jsQyBQ" name="MultitrackSpectrumAnalyzer">
     <GROUP id="{2FBBF3FD-7247-0C20-3FF6-17743C5AE62C}" name="Source">
       <FILE id="Mi0bq1" name="Main.cpp" compile="1" resource="0" file="Source/Main.cpp"/>
@@ -9,13 +10,18 @@
       <FILE id="FQgmT5" name="MainComponent.cpp" compile="1" resource="0"
             file="Source/MainComponent.cpp"/>
       <FILE id="TmH8k2" name="TrackManager.h" compile="0" resource="0" file="Source/TrackManager.h"/>
-      <FILE id="TmH8k3" name="TrackManager.cpp" compile="1" resource="0" file="Source/TrackManager.cpp"/>
-      <FILE id="TlP4n1" name="TrackListPanel.h" compile="0" resource="0" file="Source/TrackListPanel.h"/>
-      <FILE id="TlP4n2" name="TrackListPanel.cpp" compile="1" resource="0" file="Source/TrackListPanel.cpp"/>
+      <FILE id="TmH8k3" name="TrackManager.cpp" compile="1" resource="0"
+            file="Source/TrackManager.cpp"/>
+      <FILE id="TlP4n1" name="TrackListPanel.h" compile="0" resource="0"
+            file="Source/TrackListPanel.h"/>
+      <FILE id="TlP4n2" name="TrackListPanel.cpp" compile="1" resource="0"
+            file="Source/TrackListPanel.cpp"/>
       <FILE id="TrIt01" name="TrackItem.h" compile="0" resource="0" file="Source/TrackItem.h"/>
       <FILE id="TrIt02" name="TrackItem.cpp" compile="1" resource="0" file="Source/TrackItem.cpp"/>
-      <FILE id="SpD1s1" name="SpectrumDisplay.h" compile="0" resource="0" file="Source/SpectrumDisplay.h"/>
-      <FILE id="SpD1s2" name="SpectrumDisplay.cpp" compile="1" resource="0" file="Source/SpectrumDisplay.cpp"/>
+      <FILE id="SpD1s1" name="SpectrumDisplay.h" compile="0" resource="0"
+            file="Source/SpectrumDisplay.h"/>
+      <FILE id="SpD1s2" name="SpectrumDisplay.cpp" compile="1" resource="0"
+            file="Source/SpectrumDisplay.cpp"/>
     </GROUP>
   </MAINGROUP>
   <MODULES>

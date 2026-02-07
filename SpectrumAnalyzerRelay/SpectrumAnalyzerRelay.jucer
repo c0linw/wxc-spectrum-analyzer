@@ -1,7 +1,8 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
 <JUCERPROJECT id="S9Nt6a" name="SpectrumAnalyzerRelay" projectType="audioplug"
-              useAppConfig="0" addUsingNamespaceToJuceHeader="0" jucerFormatVersion="1">
+              useAppConfig="0" addUsingNamespaceToJuceHeader="0" jucerFormatVersion="1"
+              companyName="c0linw" pluginVST3Category="Analyzer,Tools">
   <MAINGROUP id="N2jNEt" name="SpectrumAnalyzerRelay">
     <GROUP id="{2C5F9DA3-08F4-70F6-8CAA-29BA2AF506A1}" name="Source">
       <FILE id="MN1Nvh" name="PluginProcessor.cpp" compile="1" resource="0"
